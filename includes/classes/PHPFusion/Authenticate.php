@@ -18,19 +18,23 @@
 namespace PHPFusion;
 if (!defined("IN_FUSION")) { die("Access Denied"); }
 
+// TODO: Move these lines somewhere else. They should not be before a class
 $settings = fusion_get_settings();
-$fusion_domain = (strstr($settings['site_host'], "www.") ? substr($settings['site_host'], 3) : $settings['site_host']);
-define("COOKIE_DOMAIN", $settings['site_host'] != 'localhost' ? $fusion_domain : FALSE);
-define("COOKIE_PATH", $settings['site_path']);
-define("COOKIE_USER", COOKIE_PREFIX."user");
-define("COOKIE_ADMIN", COOKIE_PREFIX."admin");
-define("COOKIE_VISITED", COOKIE_PREFIX."visited");
-define("COOKIE_LASTVISIT", COOKIE_PREFIX."lastvisit");
+if ($settings) {
+	$fusion_domain = (strstr($settings['site_host'], "www.") ? substr($settings['site_host'], 3) : $settings['site_host']);
+	define("COOKIE_DOMAIN", $settings['site_host'] != 'localhost' ? $fusion_domain : FALSE);
+	define("COOKIE_PATH", $settings['site_path']);
+	define("COOKIE_USER", COOKIE_PREFIX."user");
+	define("COOKIE_ADMIN", COOKIE_PREFIX."admin");
+	define("COOKIE_VISITED", COOKIE_PREFIX."visited");
+	define("COOKIE_LASTVISIT", COOKIE_PREFIX."lastvisit");
+}
 
 class Authenticate {
-	private $_userData = array("user_level" => 0, "user_rights" => "", "user_groups" => "", "user_theme" => "Default");
+	private $_userData = array();
 
 	public function __construct($inputUserName, $inputPassword, $remember) {
+		$this->_userData = self::getEmptyUserData();
 		$this->_authenticate($inputUserName, $inputPassword, $remember);
 	}
 
@@ -334,8 +338,13 @@ class Authenticate {
 
 	// Get Empty User Data
 	public static function getEmptyUserData() {
-		global $settings;
-		return array("user_level" => 0, "user_rights" => "", "user_groups" => "", "user_theme" => $settings['theme']);
+		return  array(
+			"user_level" => USER_LEVEL_PUBLIC,
+			"user_rights" => "",
+			"user_groups" => "",
+			"user_theme" => fusion_get_settings('theme') ? : 'Default',
+			"user_language" => "",
+		);
 	}
 
 	// Set user theme

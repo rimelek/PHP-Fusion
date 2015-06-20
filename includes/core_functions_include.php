@@ -1274,7 +1274,7 @@ function fusion_get_enabled_languages() {
 	static $enabled_languages = NULL;
 	if ($enabled_languages === NULL) {
 		$settings = fusion_get_settings();
-		$values = explode('.', $settings['enabled_languages']);
+		$values = explode('.', $settings ? $settings['enabled_languages'] : '');
 		$enabled_languages = array_combine($values, $values);
 	}
 	return $enabled_languages;

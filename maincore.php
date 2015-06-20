@@ -20,6 +20,8 @@ if (preg_match("/maincore.php/i", $_SERVER['PHP_SELF'])) { die(); }
 define("IN_FUSION", TRUE);
 
 use PHPFusion\Authenticate;
+use PHPFusion\Core;
+
 require __DIR__.'/includes/core_resources_include.php';
 
 // Prevent any possible XSS attacks via $_GET.
@@ -131,24 +133,15 @@ if (!defined("IN_PERMALINK")) {
 	define("START_PAGE", substr(preg_replace("#(&amp;|\?)(s_action=edit&amp;shout_id=)([0-9]+)#s", "", TRUE_PHP_SELF.(FUSION_QUERY ? "?".FUSION_QUERY : "")), 1));
 }
 
-// Autenticate user
-if (isset($_POST['login']) && isset($_POST['user_name']) && isset($_POST['user_pass'])) {
-	$auth = new Authenticate($_POST['user_name'], $_POST['user_pass'], (isset($_POST['remember_me']) ? TRUE : FALSE));
-	$userdata = $auth->getUserData();
-	unset($auth, $_POST['user_name'], $_POST['user_pass']);
-	redirect(FUSION_REQUEST);
-} elseif (isset($_GET['logout']) && $_GET['logout'] == "yes") {
-	$userdata = Authenticate::logOut();
-	redirect(BASEDIR."index.php");
-} else {
-	$userdata = Authenticate::validateAuthUser(); // ok userdata never add _1.
-}
+Core::authenticate();
+
+$userdata = Core::getCurrentUserData();
 
 // User level, Admin Rights & User Group definitions
-define("iGUEST", $userdata['user_level'] == 0 ? 1 : 0);
-define("iMEMBER", $userdata['user_level'] <= -101 ? 1 : 0);
-define("iADMIN", $userdata['user_level'] <= -102 ? 1 : 0);
-define("iSUPERADMIN", $userdata['user_level'] == -103 ? 1 : 0);
+define("iGUEST", $userdata['user_level'] == USER_LEVEL_PUBLIC);
+define("iMEMBER", $userdata['user_level'] <= USER_LEVEL_MEMBER);
+define("iADMIN", $userdata['user_level'] <= USER_LEVEL_ADMIN);
+define("iSUPERADMIN", $userdata['user_level'] == USER_LEVEL_SUPER_ADMIN);
 define("iUSER", $userdata['user_level']);
 define("iUSER_RIGHTS", $userdata['user_rights']);
 define("iUSER_GROUPS", substr($userdata['user_groups'], 1));
@@ -162,9 +155,9 @@ $enabled_languages = array_keys($language_opts);
 if (isset($_GET['lang']) && valid_language($_GET['lang'])) {
 	$lang = stripinput($_GET['lang']);
 
-echo set_language($lang);
+	echo set_language($lang);
 
-// Redirect handler to keep position upon lang switch
+	// Redirect handler to keep position upon lang switch
 	$this_redir = '';
 	if (FUSION_QUERY != "") {
 		if (stristr(FUSION_QUERY, '?')) {
@@ -178,29 +171,11 @@ echo set_language($lang);
 	} else {
 		$this_redir = "?";
 	}
-// Everything is instanced, strip issets after lang switch unless we are in The Administration
-if (!preg_match('/administration/i', $_SERVER['PHP_SELF'])) {
-	$this_redir = preg_replace("/(.*?)?(.*)/", "$1", $this_redir);
-}
-redirect(FUSION_SELF.$this_redir."");
-}
-
-// Main language detection procedure
-if (iMEMBER && valid_language($userdata['user_language'])) {
-	define("LANGUAGE", $userdata['user_language']);
-	define("LOCALESET", $userdata['user_language']."/");
-} else {
-$data = dbarray(dbquery("SELECT * FROM ".DB_LANGUAGE_SESSIONS." WHERE user_ip='".USER_IP."'"));
-	if ($data['user_language']) {
-	   define("LANGUAGE",$data['user_language']);    
-	   define("LOCALESET",$data['user_language']."/");
-    } 
-}
-
-// Check if definitions have been set, if not set the default language to system language
-if (!defined("LANGUAGE")) {
-      define ("LANGUAGE", $settings['locale']);
-      define ("LOCALESET", $settings['locale']."/");
+	// Everything is instanced, strip issets after lang switch unless we are in The Administration
+	if (!preg_match('/administration/i', $_SERVER['PHP_SELF'])) {
+		$this_redir = preg_replace("/(.*?)?(.*)/", "$1", $this_redir);
+	}
+	redirect(FUSION_SELF.$this_redir);
 }
 
 // Language detection hub for multilingual content, detect, set correct language if it is not set

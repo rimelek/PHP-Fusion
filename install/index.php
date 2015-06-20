@@ -17,6 +17,7 @@
 +--------------------------------------------------------*/
 define("IN_FUSION", TRUE);
 use PHPFusion\Database\DatabaseFactory;
+use PHPFusion\Core;
 
 ini_set('display_errors', 1);
 define('BASEDIR', '../');
@@ -26,14 +27,15 @@ if (!defined('DYNAMICS')) {
 	define('DYNAMICS', INCLUDES."dynamics/");
 }
 
-if (isset($_GET['localeset']) && file_exists(LOCALE.$_GET['localeset']) && is_dir(LOCALE.$_GET['localeset'])) {
-	include LOCALE.$_GET['localeset']."/setup.php";
-	define("LOCALESET", $_GET['localeset']."/");
-} else {
-	$_GET['localeset'] = "English";
-	define("LOCALESET", "English/");
-	include LOCALE.LOCALESET."setup.php";
+
+$localeset = filter_input(INPUT_GET, 'localeset') ? : filter_input(INPUT_POST, 'localeset');
+
+if ($localeset && file_exists(LOCALE.$localeset) && is_dir(LOCALE.$localeset)) {
+	Core::setDefaultLanguage($localeset);
 }
+$_GET['localeset'] = Core::getLanguage();
+require LOCALE.Core::getLanguage().'/setup.php';
+
 
 require_once INCLUDES."defender.inc.php";
 include INCLUDES."output_handling_include.php";
@@ -77,8 +79,12 @@ include_once INCLUDES."dynamics/dynamics.inc.php";
 
 DatabaseFactory::setDefaultDriver(intval($pdo_enabled) === 1 ? DatabaseFactory::DRIVER_PDO_MYSQL : DatabaseFactory::DRIVER_MYSQL);
 
+define('LANGUAGE', Core::getLanguage());
+define('LOCALESET', LANGUAGE.'/');
+
 require_once INCLUDES."db_handlers/all_functions_include.php";
 require_once LOCALE.LOCALESET.'global.php';
+
 $dynamics = new dynamics();
 $dynamics->boot();
 $system_apps = array(
@@ -120,7 +126,7 @@ switch (filter_input(INPUT_POST, 'step', FILTER_VALIDATE_INT) ? : 1) {
 			require_once INCLUDES.'multisite_include.php';
 			$site_path = fusion_get_settings('site_path');
 			write_htaccess($site_path);
-			redirect(FUSION_SELF."?localeset=".$_GET['localeset']);
+			redirect(FUSION_SELF."?localeset=".LANGUAGE);
 		}
 		// ALWAYS reset config to config_temp.php
 		if (file_exists(BASEDIR.'config.php')) {
@@ -155,7 +161,7 @@ switch (filter_input(INPUT_POST, 'step', FILTER_VALIDATE_INT) ? : 1) {
 			$content .= "<span class='strong display-inline-block m-b-10'>".$locale['setup_1011']."</span>\n<br/><p>".$locale['setup_1012']."</p>";
 			$content .= form_button('step', $locale['setup_1013'], '6', array('class' => 'btn-primary btn-sm m-r-10'));
 			$content .= "</div>\n";
-			$content .= "<input type='hidden' name='localeset' value='".stripinput($_GET['localeset'])."' />\n";
+			$content .= "<input type='hidden' name='localeset' value='".stripinput(LANGUAGE)."' />\n";
 			if (isset($db_prefix)) {
 				$content .= "<div class='well'>\n";
 				$content .= "<span class='strong display-inline-block m-b-10'>".$locale['setup_1014']."</span>\n<br/><p>".$locale['setup_1015']."</p>";
@@ -164,7 +170,7 @@ switch (filter_input(INPUT_POST, 'step', FILTER_VALIDATE_INT) ? : 1) {
 			}
 		} /* Without click uninstall this is the opening page of installer - just for safety. if not, an else suffices */ elseif (!isset($_POST['uninstall'])) {
 			// no db_prefix
-			$locale_list = makefileopts($locale_files, $_GET['localeset']);
+			$locale_list = makefileopts($locale_files, Core::getLanguage());
 			$content .= "<h4 class='strong'>".$locale['setup_0002']."</h4>\n";
 			if (isset($_GET['error']) && $_GET['error'] == 'license') {
 				$content .= "<div class='alert alert-danger'>".$locale['setup_5000']."</div>\n";
@@ -172,7 +178,7 @@ switch (filter_input(INPUT_POST, 'step', FILTER_VALIDATE_INT) ? : 1) {
 				$content .= "<span>".$locale['setup_0003']."</span>\n";
 			}
 			$content .= "<span class='display-block m-t-20 m-b-10 strong'>".$locale['setup_1000']."</span>\n";
-			$content .= form_select('localeset', '', array_combine($locale_files, $locale_files), $_GET['localeset'], array('placeholder' => $locale['choose']));
+			$content .= form_select('localeset', '', array_combine($locale_files, $locale_files), LANGUAGE, array('placeholder' => $locale['choose']));
 			$content .= "<script>\n";
 			$content .= "$('#localeset').bind('change', function() {
 				var value = $(this).val();
@@ -189,7 +195,7 @@ switch (filter_input(INPUT_POST, 'step', FILTER_VALIDATE_INT) ? : 1) {
 		break;
 	// Step 2 - File and Folder Permissions
 	case 2:
-		if (!isset($_POST['license'])) redirect(FUSION_SELF."?error=license&localeset=".$_GET['localeset']);
+		if (!isset($_POST['license'])) redirect(FUSION_SELF."?error=license&localeset=".LANGUAGE);
 		// Create a blank config temp by now if not exist.
 		if (!file_exists(BASEDIR."config_temp.php")) {
 			if (file_exists(BASEDIR."_config.php") && function_exists("rename")) {
@@ -466,7 +472,7 @@ switch (filter_input(INPUT_POST, 'step', FILTER_VALIDATE_INT) ? : 1) {
 		break;
 	// Step 5 - Configure Core System - $settings accessible - Requires Config_temp.php (Shut down site when upgrading).
 	case 5:
-		include LOCALE.$_GET['localeset']."/admin/infusions.php";
+		include LOCALE.LANGUAGE."/admin/infusions.php";
 //		if (!isset($_POST['done'])) {
 			// Load Config and SQL handler.
 			if (file_exists(BASEDIR.'config_temp.php')) {
@@ -664,7 +670,7 @@ if ($inf) {
 		$formaction = FUSION_SELF;
 		foreach ($inf as $i => $item) {
 			$content .= openform('infuseform', 'post', $formaction, array('max_tokens' => 1));
-			$content .= form_hidden('step', 'step', '5', array(''));
+			$content .= form_hidden('step', 'step', '5', '');
 			$content .= "<input type='hidden' name='step' value='5' />\n";
 			$content .= "<div class='list-group-item'>\n";
 			$content .= "<div class='row'>\n";
@@ -862,7 +868,6 @@ $buttonMode = 'next';
 		break;
 }
 
-$localeset = filter_input(INPUT_POST, 'localeset');
 ob_start();
 opensetup();
 echo $content;

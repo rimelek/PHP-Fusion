@@ -112,7 +112,7 @@ if (db_exists(DB_NEWS_CATS)) {
 	$result = dbquery("SELECT * FROM ".DB_NEWS_CATS."");
 	if (dbrows($result) == 0) {
 		for ($i=0;$i<sizeof($enabled_languages);$i++) {
-		include LOCALE."".$enabled_languages[$i]."/setup.php";
+			include LOCALE."".$enabled_languages[$i]."/setup.php";
 			dbquery("INSERT INTO ".DB_NEWS_CATS." (news_cat_name, news_cat_image, news_cat_language) VALUES ('".$locale['setup_3500']."', 'bugs.gif', '".$enabled_languages[$i]."')");
 			dbquery("INSERT INTO ".DB_NEWS_CATS." (news_cat_name, news_cat_image, news_cat_language) VALUES ('".$locale['setup_3501']."', 'downloads.gif', '".$enabled_languages[$i]."')");
 			dbquery("INSERT INTO ".DB_NEWS_CATS." (news_cat_name, news_cat_image, news_cat_language) VALUES ('".$locale['setup_3502']."', 'games.gif', '".$enabled_languages[$i]."')");
